@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<title>Fork and Knife Classifier with TTS</title>
+		<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+		<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				height: 100vh;
+				margin: 0;
+				background-color: #f5f5f5;
+			}
+
+			h1 {
+				color: #333;
+			}
+
+			#webcam-container {
+				display: flex;
+				justify-content: center;
+				margin-top: 20px;
+			}
+
+			#label-container {
+				margin-top: 20px;
+				font-size: 1.2em;
+				color: #666;
+			}
+
+			.label {
+				padding: 5px;
+				background-color: #fff;
+				border: 1px solid #ddd;
+				border-radius: 5px;
+				margin-top: 5px;
+			}
+
+			#webcam-container canvas {
+				border-radius: 10px;
+				box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Fork and Knife Classifier with TTS</h1>
+		<h2>-made by yang da young-</h2>
+		<div id="webcam-container"></div>
+		<div id="label-container"></div>
+		<script type="text/javascript">
+			let model, webcam, labelContainer, maxPredictions;
+			let lastSpoken = "";
+
+			// 1. Teachable Machine 모델을 로드하고 웹캠을 설정합니다.
+			async function init() {
+				const modelURL =
+					"/google-teachable-machine/fork_knife_GT_model/model.json"; // 절대 경로
+				const metadataURL =
+					"/google-teachable-machine/fork_knife_GT_model/metadata.json"; // 절대 경로
+
+				model = await tmImage.load(modelURL, metadataURL);
+				maxPredictions = model.getTotalClasses();
+
+				// 2. 웹캠을 설정하고 웹캠에서 이미지를 가져와 예측합니다.
+				try {
+					const flip = true;
+					webcam = new tmImage.Webcam(200, 200, flip);
+					await webcam.setup();
+					await webcam.play();
+					window.requestAnimationFrame(loop);
+
+					document
+						.getElementById("webcam-container")
+						.appendChild(webcam.canvas);
+					labelContainer = document.getElementById("label-container");
+					for (let i = 0; i < maxPredictions; i++) {
+						const div = document.createElement("div");
+						div.className = "label";
+						labelContainer.appendChild(div);
+					}
+				} catch (err) {
+					// 3. 웹캠 설정이 실패하면 콘솔에 오류를 출력합니다.
+					console.error("Webcam setup failed: ", err);
+				}
+			}
+
+			// 4. 웹캠에서 이미지를 가져와 예측하는 함수를 반복 호출합니다.
+			async function loop() {
+				webcam.update();
+				await predict();
+				window.requestAnimationFrame(loop);
+			}
+
+			// 5. 웹캠에서 가져온 이미지를 모델로 전달하여 예측합니다. 예측 결과를 화면에 표시하고, 확률이 80% 이상인 경우 TTS로 읽습니다.
+			async function predict() {
+				const prediction = await model.predict(webcam.canvas);
+				for (let i = 0; i < maxPredictions; i++) {
+					const classPrediction =
+						prediction[i].className +
+						": " +
+						prediction[i].probability.toFixed(2);
+					labelContainer.childNodes[i].innerHTML = classPrediction;
+
+					if (
+						prediction[i].probability > 0.8 &&
+						prediction[i].className !== lastSpoken
+					) {
+						lastSpoken = prediction[i].className;
+						speakText(prediction[i].className);
+					}
+				}
+			}
+
+			// 6. TTS로 텍스트를 읽는 함수입니다. 'fork'의 발음을 제어하기 위해 SSML을 사용합니다.
+			function speakText(text) {
+				const msg = new SpeechSynthesisUtterance();
+				msg.lang = "en-US";
+				msg.rate = 1;
+
+				if (text === "fork") {
+					// SSML을 사용하여 'fork'의 발음을 제어합니다.
+					msg.text =
+						'<speak> <phoneme alphabet="ipa" ph="fɔːk">fork</phoneme> </speak>';
+				} else {
+					msg.text = text;
+				}
+				msg.voice = speechSynthesis
+					.getVoices()
+					.find((voice) => voice.lang === "en-US");
+
+				window.speechSynthesis.speak(msg);
+			}
+
+			init();
+		</script>
+	</body>
+</html>
