@@ -58,10 +58,8 @@
 
 			// 1. Teachable Machine 모델을 로드하고 웹캠을 설정합니다.
 			async function init() {
-				const modelURL =
-					"/google-teachable-machine/fork_knife_GT_model/model.json"; // 절대 경로
-				const metadataURL =
-					"/google-teachable-machine/fork_knife_GT_model/metadata.json"; // 절대 경로
+				const modelURL = "./fork_knife_GT_model/model.json"; // 상대 경로
+				const metadataURL = "./fork_knife_GT_model/metadata.json"; // 상대 경로
 
 				model = await tmImage.load(modelURL, metadataURL);
 				maxPredictions = model.getTotalClasses();
